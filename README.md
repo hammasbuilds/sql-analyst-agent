@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hammas159/sql-analyst-agent/actions/workflows/ci.yml"><img src="https://github.com/hammas159/sql-analyst-agent/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
+  <a href="https://github.com/hammasbuilds/sql-analyst-agent/actions/workflows/ci.yml"><img src="https://github.com/hammasbuilds/sql-analyst-agent/actions/workflows/ci.yml/badge.svg" alt="ci"></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/postgres-read--only%20role-336791" alt="postgres">
   <img src="https://img.shields.io/badge/stack-FastAPI%20%C2%B7%20sqlglot-orange" alt="stack">
@@ -191,7 +191,7 @@ MIT
 ## Run it yourself
 
 ```bash
-git clone https://github.com/hammas159/sql-analyst-agent
+git clone https://github.com/hammasbuilds/sql-analyst-agent
 cd sql-analyst-agent
 
 make up        # Postgres 17 on :5434
