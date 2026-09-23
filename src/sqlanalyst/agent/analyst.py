@@ -73,6 +73,15 @@ def answer(question: str) -> QueryResult:
 
         result.attempts.append(attempt)
 
+        # A refusal is final. Retrying it spends three more model calls on a request that
+        # can never become a SELECT, and hands the model three more chances to phrase it
+        # past the guard - so the repair loop is a liability here rather than a feature.
+        if check.refused:
+            result.failed = True
+            result.failure_reason = attempt.error
+            result.latency_ms = int((time.perf_counter() - started) * 1000)
+            return result
+
         if attempt_no == s.max_repair_attempts:
             result.failed = True
             result.failure_reason = attempt.error

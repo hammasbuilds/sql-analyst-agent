@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     llm_backend: str = "ollama"
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5:3b-instruct"
+    ollama_model: str = "qwen2.5-coder:14b"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-5"
     hf_token: str = ""

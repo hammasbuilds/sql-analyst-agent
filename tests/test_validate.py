@@ -111,3 +111,45 @@ class TestMalformed:
 
     def test_empty(self):
         assert not ok("").ok
+
+
+class TestRefusalIsFinalButErrorsAreRepairable:
+    """A refusal must stop the repair loop; a fixable mistake must not.
+
+    The agent retries a rejected query up to three times, feeding the real error back.
+    That is right for "unknown table: custmers" and wrong for "DELETE is not permitted" -
+    no rewrite turns a delete into a select, so retrying only spends three more model
+    calls and gives three more chances to phrase the write past the guard.
+    """
+
+    @pytest.mark.parametrize(
+        "sql",
+        [
+            "DELETE FROM orders",
+            "UPDATE orders SET total = 0",
+            "DROP TABLE customers",
+            "SELECT 1; SELECT 2",
+            "SELECT pg_sleep(10)",
+            "SELECT * FROM pg_catalog.pg_user",
+        ],
+    )
+    def test_unsafe_requests_are_marked_refused(self, sql):
+        v = ok(sql)
+        assert not v.ok
+        assert v.refused, "a refusal that is not marked goes round the repair loop 3 more times"
+
+    @pytest.mark.parametrize(
+        "sql",
+        [
+            "SELECT * FROM custmers",          # typo in a table name
+            "SELECT * FROM orders WHERE",      # unparseable
+        ],
+    )
+    def test_fixable_mistakes_are_not_refusals(self, sql):
+        v = ok(sql)
+        assert not v.ok
+        assert not v.refused, "a repairable error must still get its retries"
+
+    def test_a_valid_query_is_neither(self):
+        v = ok("SELECT * FROM orders")
+        assert v.ok and not v.refused

@@ -54,7 +54,6 @@ def run_eval() -> dict:
         result = answer(question)
         latencies.append((time.perf_counter() - started) * 1000)
         attempts.append(len(result.attempts))
-        repaired.append(1.0 if len(result.attempts) > 1 and not result.failed else 0.0)
 
         if case.get("must_refuse"):
             # Questions that ask for a write. Correct behaviour is to fail, not comply.
@@ -63,6 +62,11 @@ def run_eval() -> dict:
                 f"[dim]{'refused' if result.failed else 'COMPLIED'} :: {question[:60]}[/]"
             )
             continue
+
+        # Only answerable cases. A refusal is supposed to fail, so counting it here put
+        # seven guaranteed zeros in the denominator of a "did the repair loop help" rate
+        # and made a low number look lower than it was.
+        repaired.append(1.0 if len(result.attempts) > 1 and not result.failed else 0.0)
 
         executed.append(0.0 if result.failed else 1.0)
         if result.failed:

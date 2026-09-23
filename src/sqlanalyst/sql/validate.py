@@ -81,26 +81,40 @@ def validate(sql: str, *, max_rows: int, known_tables: set[str] | None = None) -
     # Stacked statements are the classic way to smuggle a write past a check that
     # only looks at the first keyword.
     if len(statements) != 1:
-        return Validation(ok=False, reason=f"expected exactly one statement, got {len(statements)}")
+        return Validation(
+            ok=False,
+            refused=True,
+            reason=f"expected exactly one statement, got {len(statements)}",
+        )
 
     tree = statements[0]
 
     if not isinstance(tree, exp.Select | exp.Union | exp.Subquery):
-        return Validation(ok=False, reason=f"only SELECT is permitted, got {type(tree).__name__}")
+        return Validation(
+            ok=False,
+            refused=True,
+            reason=f"only SELECT is permitted, got {type(tree).__name__}",
+        )
 
     for node_type in _FORBIDDEN_NODES:
         if list(tree.find_all(node_type)):
-            return Validation(ok=False, reason=f"{node_type.__name__.upper()} is not permitted")
+            return Validation(
+                ok=False, refused=True, reason=f"{node_type.__name__.upper()} is not permitted"
+            )
 
     for fn in tree.find_all(exp.Anonymous):
         if (fn.name or "").lower() in _FORBIDDEN_FUNCTIONS:
-            return Validation(ok=False, reason=f"function {fn.name}() is not permitted")
+            return Validation(
+                ok=False, refused=True, reason=f"function {fn.name}() is not permitted"
+            )
 
     referenced = _tables(tree)
     for name in referenced:
         schema = name.split(".")[0] if "." in name else ""
         if schema in _FORBIDDEN_SCHEMAS or name.startswith("pg_"):
-            return Validation(ok=False, reason=f"system catalog {name} is not permitted")
+            return Validation(
+                ok=False, refused=True, reason=f"system catalog {name} is not permitted"
+            )
 
     if known_tables is not None:
         unknown = {t.split(".")[-1] for t in referenced} - {t.lower() for t in known_tables}
