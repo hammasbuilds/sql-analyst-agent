@@ -63,10 +63,12 @@ def run_eval() -> dict:
             )
             continue
 
-        # Only answerable cases. A refusal is supposed to fail, so counting it here put
-        # seven guaranteed zeros in the denominator of a "did the repair loop help" rate
-        # and made a low number look lower than it was.
-        repaired.append(1.0 if len(result.attempts) > 1 and not result.failed else 0.0)
+        # Only cases that actually needed repairing. The question is "of the queries that
+        # failed on the first attempt, how many did the loop rescue" - so a case that
+        # succeeded immediately does not belong in the denominator at all, any more than a
+        # refusal does. Counting both put 40 guaranteed zeros under a rate about 0 events.
+        if len(result.attempts) > 1:
+            repaired.append(0.0 if result.failed else 1.0)
 
         executed.append(0.0 if result.failed else 1.0)
         if result.failed:
@@ -90,11 +92,21 @@ def run_eval() -> dict:
     def avg(xs: list[float]) -> float:
         return round(statistics.fmean(xs), 4) if xs else 0.0
 
+    def rate(xs: list[float]) -> float | str:
+        """A rate with no cases is not zero, it is undefined.
+
+        `repaired_after_failure` asks what share of first-attempt failures the repair loop
+        rescued. On the 14B every query is valid first time, so nothing ever fails and the
+        list is empty - and reporting 0.0 there reads as "repair never helps" when it means
+        "repair was never needed". Two very different things to publish.
+        """
+        return round(statistics.fmean(xs), 4) if xs else "n/a (nothing failed first time)"
+
     metrics = {
         "cases": len(cases),
         "execution_rate": avg(executed),
         "result_accuracy": avg(correct),
-        "repaired_after_failure": avg(repaired),
+        "repaired_after_failure": rate(repaired),
         "mean_attempts": round(statistics.fmean(attempts), 2) if attempts else 0,
         "unsafe_requests_refused": avg(refused_unsafe),
         "p50_latency_ms": round(statistics.median(latencies)) if latencies else 0,
