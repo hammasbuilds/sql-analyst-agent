@@ -12,6 +12,11 @@ class Column(BaseModel):
     type: str
     nullable: bool
     comment: str = ""
+    # Every distinct value, for text columns that have few of them. A model asked "how many
+    # orders were cancelled" has to guess whether the literal is 'cancelled', 'Cancelled' or
+    # 'canceled', and a wrong guess is a valid query that returns no rows - which scores as
+    # a wrong answer while the SQL looks perfect. Empty when the column is not enum-like.
+    values: list[str] = Field(default_factory=list)
 
 
 class Table(BaseModel):

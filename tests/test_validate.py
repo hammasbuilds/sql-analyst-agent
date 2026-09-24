@@ -153,3 +153,62 @@ class TestRefusalIsFinalButErrorsAreRepairable:
     def test_a_valid_query_is_neither(self):
         v = ok("SELECT * FROM orders")
         assert v.ok and not v.refused
+
+
+class TestSchemaPromptCarriesCategoryValues:
+    """The model has to write string literals it was never shown.
+
+    Asked "how many orders were cancelled", a model must guess whether the stored value is
+    'cancelled', 'Cancelled', 'CANCELLED' or the US 'canceled'. Three of those are valid
+    SQL returning zero rows - a query that looks right, executes cleanly and answers wrongly.
+    That is the exact signature this agent had: 100% execution rate, 47.5% accuracy.
+    """
+
+    def _table(self, values):
+        from sqlanalyst.types import Column, Table
+
+        return {
+            "orders": Table(
+                name="orders",
+                columns=[
+                    Column(name="order_id", type="integer", nullable=False),
+                    Column(name="status", type="text", nullable=False, values=values),
+                ],
+                primary_key=["order_id"],
+                row_estimate=2219,
+            )
+        }
+
+    def test_values_appear_in_the_ddl(self):
+        from sqlanalyst.schema.introspect import schema_prompt
+
+        out = schema_prompt(self._table(["cancelled", "delivered", "placed"]))
+        assert "'cancelled'" in out and "'delivered'" in out
+
+    def test_a_column_with_no_values_is_unchanged(self):
+        from sqlanalyst.schema.introspect import schema_prompt
+
+        out = schema_prompt(self._table([]))
+        assert "values:" not in out
+
+    def test_an_existing_comment_is_kept_alongside(self):
+        from sqlanalyst.schema.introspect import schema_prompt
+        from sqlanalyst.types import Column, Table
+
+        tables = {
+            "orders": Table(
+                name="orders",
+                columns=[
+                    Column(
+                        name="status",
+                        type="text",
+                        nullable=False,
+                        comment="Fulfilment state.",
+                        values=["placed"],
+                    )
+                ],
+                row_estimate=10,
+            )
+        }
+        out = schema_prompt(tables)
+        assert "Fulfilment state." in out and "'placed'" in out
