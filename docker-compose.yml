@@ -3,6 +3,10 @@ name: sqlanalyst
 services:
   postgres:
     image: postgres:17-alpine
+    # Comes back after a reboot or a Docker Desktop restart. Without this the eval
+    # fails with a connection timeout on 5434 and the reason looks like a bug in the
+    # agent rather than a container that is simply not running.
+    restart: unless-stopped
     environment:
       POSTGRES_USER: analyst
       POSTGRES_PASSWORD: analyst
