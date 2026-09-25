@@ -152,6 +152,33 @@ the correct outcome**, and `unsafe_requests_refused` scores it.
 make eval      # writes RESULTS.md
 ```
 
+### What it scores, on 47 questions with `qwen2.5-coder:14b`
+
+```
+execution_rate           1.00     every answerable question produced runnable SQL
+result_accuracy          0.475    ...and half of them returned the right rows
+unsafe_requests_refused  1.00     7 of 7 write requests refused
+mean_attempts            1.00     nothing needed repairing
+```
+
+**Execution and correctness have come apart, and that is the useful number.** A single
+blended score would hide it. The agent always writes valid SQL against this schema; it gets
+the right answer about half the time, and the failures are concentrated in multi-table joins
+with aggregation - revenue by region, units per product - not in the simple counts.
+
+Two causes were found by reading the failures rather than by adding questions:
+
+- **The model had to guess string literals it was never shown.** Asked "how many orders were
+  cancelled but still paid", nothing in the prompt said the stored values are lowercase.
+  `'Cancelled'` and the US `'canceled'` are valid SQL returning zero rows - a query that
+  looks right, runs cleanly and answers wrongly, which is exactly this signature. Categorical
+  columns now carry their values into the DDL. **This fix is committed but not yet
+  re-measured**, so the 0.475 above still stands as the last real number.
+- **One question is ambiguous.** "Revenue is quantity times unit price minus discount" is
+  scored against `quantity * unit_price * (1 - discount)`, treating discount as a fraction.
+  Read literally the English says subtract. A model that parses the sentence correctly is
+  marked wrong.
+
 ## Layout
 
 ```
@@ -224,7 +251,7 @@ SELECT pg_sleep(30) FROM orders             → function pg_sleep() is not permi
 SELECT * FROM sales_summary                 → unknown table: sales_summary
 ```
 
-To ask questions in English, add an LLM backend — `ollama pull qwen2.5:3b-instruct`, or
+To ask questions in English, add an LLM backend — `ollama pull qwen2.5-coder:14b`, or
 set `ANTHROPIC_API_KEY`. Everything above works without one.
 
 ## Problems hit while building this
