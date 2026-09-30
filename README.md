@@ -6,8 +6,7 @@
   <a href="#self-repair">Self-repair</a> &middot;
   <a href="#a-schema-built-to-be-hard">A hard schema</a> &middot;
   <a href="#evaluation">Evaluation</a> &middot;
-  <a href="#quick-start">Quick start</a> &middot;
-  <a href="#problems-hit-while-building-this">Problems hit</a>
+  <a href="#quick-start">Quick start</a> 
 </p>
 
 <p align="center">
@@ -253,22 +252,3 @@ SELECT * FROM sales_summary                 → unknown table: sales_summary
 
 To ask questions in English, add an LLM backend — `ollama pull qwen2.5-coder:14b`, or
 set `ANTHROPIC_API_KEY`. Everything above works without one.
-
-## Problems hit while building this
-
-**The dangerous version of this project is the one that looks finished.** A text-to-SQL
-demo that works on happy-path questions is easy; the failure modes are all adversarial
-and none of them show up in a demo. So the validator is tested against the techniques
-that actually defeat naive guards — stacked statements, a `DELETE` hidden inside a CTE, a
-keyword inside a string literal, casing, comments — and each is a test that must fail
-closed.
-
-**A regex-based guard was the first design, and it is indefensible.** `"DELETE" not in
-sql.upper()` is defeated by a comment, by casing, by a nested query, and by the perfectly
-legitimate query `WHERE name = 'delete from orders'`. *Replaced* with a `sqlglot` parse
-tree, so the check inspects what the SQL *is* rather than what it looks like.
-
-**Unknown tables are caught before the database sees them.** Not for safety — for the
-repair loop. `unknown table 'sales_summary'. Available: categories, customers, ...` is a
-far stronger prompt for self-correction than Postgres's `relation does not exist`, and it
-saves a round trip.
