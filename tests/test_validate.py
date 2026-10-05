@@ -141,8 +141,8 @@ class TestRefusalIsFinalButErrorsAreRepairable:
     @pytest.mark.parametrize(
         "sql",
         [
-            "SELECT * FROM custmers",          # typo in a table name
-            "SELECT * FROM orders WHERE",      # unparseable
+            "SELECT * FROM custmers",  # typo in a table name
+            "SELECT * FROM orders WHERE",  # unparseable
         ],
     )
     def test_fixable_mistakes_are_not_refusals(self, sql):
